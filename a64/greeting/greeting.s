@@ -9,14 +9,32 @@
 
 	name:
 		.skip 20
+	
+	savecursor:
+		.ascii "\033[s"
+	savecursor_len = . - savecursor
+	
+	erasedown:
+		.ascii "\033[J"
+	erasedown_len = . - erasedown
 
+	unsavecursor:
+		.ascii "\033[u"
+	unsavecursor_len = . - unsavecursor
 
 .text
 
 .global _start
 
 _start:
-	/* Write greeting */
+	/* start by saving the cusor position so we can write over what we have just written
+	mov x0, #1					/* Destination file descriptor 0 -> stdin, 1 -> stdout, 2 -> stderr */
+	ldr x1, =savecursor			/* Pointer to text buffer start */
+	ldr x2, =savecursor_len		/* Length of text buffer */
+	mov x8, #64					/* Syscall code for write */
+	svc #0						/* Envoke write syscall */
+
+greet:
 	mov x0, #1					/* Destination file descriptor 0 -> stdin, 1 -> stdout, 2 -> stderr */
 	ldr x1, =greeting			/* Pointer to text start */
 	ldr x2, =greeting_len		/* Length of text */
@@ -31,6 +49,21 @@ read:
 	svc #0						/* Envoke read syscall*/
 
 	str x0, [sp, #16]!			/* x0 will hold result of length of input text from read, let's save it on the stack */
+
+repos:
+	/* reposition the cursor to the start */
+	mov x0, #1					/* stdout */
+	ldr x1, =unsavecursor		/* Address of start of buffer */
+	ldr x2, =unsavecursor_len	/* Buffer length */
+	mov x8, #64					/* Syscall code for write */
+	svc #0						/* Envoke write syscall */
+
+clear:
+	mov x0, #1					/* stdout */
+	ldr x1, =erasedown			/* Address of start of buffer */
+	ldr x2, =erasedown_len		/* Buffer length */
+	mov x8, #64					/* Syscall code for write */
+	svc #0						/* Envoke write syscall */
 
 respond:
 	mov x0, #1					/* stdout */
